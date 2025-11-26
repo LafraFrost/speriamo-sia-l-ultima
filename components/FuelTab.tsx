@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Fuel, TrendingUp, Gauge, Save, Check, AlertCircle } from 'lucide-react';
+import { Fuel, TrendingUp, Gauge, Check, AlertCircle } from 'lucide-react';
 import { Region, FuelType, EuroClass, SavedCar } from '../types';
 
 interface FuelData {
@@ -188,7 +188,6 @@ const FuelTab: React.FC<FuelTabProps> = ({
                   </>
                 ) : (
                   <>
-                    <Save size={18} />
                     Salva nel Garage
                   </>
                 )}
