@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Fuel, TrendingUp, Gauge, RotateCcw } from 'lucide-react';
+import { Fuel, TrendingUp, Gauge, Save, Check, AlertCircle } from 'lucide-react';
+import { Region, FuelType, EuroClass, SavedCar } from '../types';
 
 interface FuelData {
   year: number;
@@ -11,12 +12,28 @@ interface FuelData {
 
 interface FuelTabProps {
   duration: number;
+  onGarageUpdate: () => void;
+  onReset: () => void;
+  // Vehicle Data for Saving
+  carName: string;
+  kw: number | "";
+  region: Region | "";
+  fuel: FuelType | "";
+  euroClass: EuroClass | "";
+  regYear: number | "";
+  directDebit: boolean;
 }
 
-const FuelTab: React.FC<FuelTabProps> = ({ duration }) => {
+const FuelTab: React.FC<FuelTabProps> = ({ 
+  duration, 
+  onGarageUpdate,
+  onReset,
+  carName, kw, region, fuel, euroClass, regYear, directDebit
+}) => {
   const [consumption, setConsumption] = useState<number | "">(0); // L/100km
   const [price, setPrice] = useState<number | "">(0); // €/L
   const [kmAnnual, setKmAnnual] = useState<number | "">(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Use safe values for calculations (treat "" as 0)
   const safeConsumption = consumption === "" ? 0 : consumption;
@@ -26,6 +43,9 @@ const FuelTab: React.FC<FuelTabProps> = ({ duration }) => {
   const annualCost = (safeKmAnnual / 100) * safeConsumption * safePrice;
   const annualLiters = (safeKmAnnual / 100) * safeConsumption;
   const costPerKm = safeKmAnnual > 0 ? annualCost / safeKmAnnual : 0;
+
+  // Check if vehicle data from previous tab is valid
+  const isVehicleValid = region !== "" && fuel !== "" && euroClass !== "";
 
   const chartData: FuelData[] = Array.from({ length: duration }, (_, i) => {
     const year = i + 1;
@@ -41,6 +61,47 @@ const FuelTab: React.FC<FuelTabProps> = ({ duration }) => {
     setConsumption(0);
     setPrice(0);
     setKmAnnual(0);
+    setIsSaved(false);
+  };
+
+  const handleSaveCar = () => {
+    if (!isVehicleValid) return;
+
+    const currentYear = new Date().getFullYear();
+    const safeKw = kw === "" ? 0 : kw;
+    const safeRegYear = regYear === "" ? currentYear : regYear;
+
+    const newCar: SavedCar = {
+      id: crypto.randomUUID(),
+      name: carName || `Auto ${fuel} ${safeKw}kW`,
+      kw: safeKw,
+      region: region as Region,
+      fuel: fuel as FuelType,
+      euroClass: euroClass as EuroClass,
+      regYear: safeRegYear,
+      consumption: safeConsumption,
+      kmAnnual: safeKmAnnual,
+      directDebit: directDebit,
+      createdAt: Date.now()
+    };
+
+    const existingCarsJson = localStorage.getItem('ecoBollo_garage');
+    const existingCars: SavedCar[] = existingCarsJson ? JSON.parse(existingCarsJson) : [];
+    
+    localStorage.setItem('ecoBollo_garage', JSON.stringify([...existingCars, newCar]));
+    
+    if (onGarageUpdate) {
+      onGarageUpdate();
+    }
+
+    // Reset local state
+    handleReset();
+    
+    // Reset vehicle data (parent state)
+    onReset();
+    
+    // Note: We don't set isSaved=true here because we are resetting the form, 
+    // so the button will likely become disabled/reset state immediately.
   };
 
   return (
@@ -107,13 +168,40 @@ const FuelTab: React.FC<FuelTabProps> = ({ duration }) => {
               </div>
             </div>
 
-            <button
-              onClick={handleReset}
-              className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-slate-100 transition-all hover:border-slate-300 mt-2"
-            >
-              <RotateCcw size={18} />
-              Reset Parametri
-            </button>
+            <div className="pt-2">
+              <button
+                onClick={handleSaveCar}
+                disabled={isSaved || !isVehicleValid}
+                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
+                  isSaved 
+                  ? 'bg-emerald-100 text-emerald-700 cursor-default'
+                  : !isVehicleValid 
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
+                }`}
+                title={!isVehicleValid ? "Compila prima i dati nella sezione Bollo Auto" : "Salva nel Garage"}
+              >
+                {isSaved ? (
+                  <>
+                    <Check size={18} />
+                    Salvato
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Salva nel Garage
+                  </>
+                )}
+              </button>
+            </div>
+            {!isVehicleValid && (
+              <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg text-amber-700 text-xs mt-2">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Per salvare, devi prima inserire i dati del veicolo (Regione, Carburante, Classe Euro) nella scheda <strong>Bollo Auto</strong>.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

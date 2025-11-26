@@ -1,36 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { calculateBolloSequence } from '../services/bolloCalculator';
-import { Region, FuelType, EuroClass, BolloResult, SavedCar } from '../types';
-import { Info, Calculator, Calendar, Zap, MapPin, Car, Save, Check, Settings2, ArrowRight, RotateCcw, CreditCard } from 'lucide-react';
+import { Region, FuelType, EuroClass, BolloResult } from '../types';
+import { Info, Calculator, Calendar, Zap, MapPin, Car, ArrowRight, CreditCard } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface BolloTabProps {
-  onGarageUpdate?: () => void;
   duration: number;
   onDurationChange: (years: number) => void;
+  // Vehicle State Props
+  carName: string; setCarName: (v: string) => void;
+  kw: number | ""; setKw: (v: number | "") => void;
+  region: Region | ""; setRegion: (v: Region | "") => void;
+  fuel: FuelType | ""; setFuel: (v: FuelType | "") => void;
+  euroClass: EuroClass | ""; setEuroClass: (v: EuroClass | "") => void;
+  regYear: number | ""; setRegYear: (v: number | "") => void;
+  directDebit: boolean; setDirectDebit: (v: boolean) => void;
+  onReset: () => void;
 }
 
-const BolloTab: React.FC<BolloTabProps> = ({ onGarageUpdate, duration, onDurationChange }) => {
+const BolloTab: React.FC<BolloTabProps> = ({ 
+  duration, 
+  onDurationChange,
+  carName, setCarName,
+  kw, setKw,
+  region, setRegion,
+  fuel, setFuel,
+  euroClass, setEuroClass,
+  regYear, setRegYear,
+  directDebit, setDirectDebit,
+  onReset
+}) => {
   const currentYear = new Date().getFullYear();
-  
-  const [carName, setCarName] = useState('');
-  // Use number | "" to allow empty input for better UX while typing
-  const [kw, setKw] = useState<number | "">(0);
-  
-  // Initialize with empty strings to force selection
-  const [region, setRegion] = useState<Region | "">("");
-  const [fuel, setFuel] = useState<FuelType | "">("");
-  const [euroClass, setEuroClass] = useState<EuroClass | "">("");
-  const [regYear, setRegYear] = useState<number | "">(currentYear);
-  const [directDebit, setDirectDebit] = useState(false);
-  
-  // Extra fields for saving/comparing
-  const [consumption, setConsumption] = useState<number | "">(0);
-  const [kmAnnual, setKmAnnual] = useState<number | "">(0);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
   const [results, setResults] = useState<BolloResult[]>([]);
-  const [isSaved, setIsSaved] = useState(false);
 
   // Check if form is valid for calculation
   const isValid = region !== "" && fuel !== "" && euroClass !== "";
@@ -54,61 +55,9 @@ const BolloTab: React.FC<BolloTabProps> = ({ onGarageUpdate, duration, onDuratio
     } else {
       setResults([]);
     }
-    setIsSaved(false); // Reset saved state when params change
   }, [kw, region, fuel, euroClass, regYear, duration, isValid, currentYear, directDebit]);
 
   const totalCost = results.reduce((acc, curr) => acc + curr.amount, 0);
-
-  const handleSaveCar = () => {
-    if (!isValid) return;
-
-    const safeKw = kw === "" ? 0 : kw;
-    const safeRegYear = regYear === "" ? currentYear : regYear;
-    const safeConsumption = consumption === "" ? 0 : consumption;
-    const safeKmAnnual = kmAnnual === "" ? 0 : kmAnnual;
-
-    const newCar: SavedCar = {
-      id: crypto.randomUUID(),
-      name: carName || `Auto ${fuel} ${safeKw}kW`,
-      kw: safeKw,
-      region: region as Region,
-      fuel: fuel as FuelType,
-      euroClass: euroClass as EuroClass,
-      regYear: safeRegYear,
-      consumption: safeConsumption,
-      kmAnnual: safeKmAnnual,
-      directDebit: directDebit,
-      createdAt: Date.now()
-    };
-
-    const existingCarsJson = localStorage.getItem('ecoBollo_garage');
-    const existingCars: SavedCar[] = existingCarsJson ? JSON.parse(existingCarsJson) : [];
-    
-    localStorage.setItem('ecoBollo_garage', JSON.stringify([...existingCars, newCar]));
-    
-    if (onGarageUpdate) {
-      onGarageUpdate();
-    }
-
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
-  };
-
-  const handleReset = () => {
-    setCarName('');
-    setKw(0);
-    setRegion("");
-    setFuel("");
-    setEuroClass("");
-    setRegYear(currentYear);
-    onDurationChange(5);
-    setDirectDebit(false);
-    setConsumption(0);
-    setKmAnnual(0);
-    setShowAdvanced(false);
-    setResults([]);
-    setIsSaved(false);
-  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -225,41 +174,6 @@ const BolloTab: React.FC<BolloTabProps> = ({ onGarageUpdate, duration, onDuratio
                </label>
             </div>
 
-            <button 
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm text-indigo-600 font-medium hover:text-indigo-700 transition-colors"
-            >
-              <Settings2 size={16} />
-              {showAdvanced ? 'Nascondi Dati Confronto' : 'Aggiungi Dati per Confronto'}
-            </button>
-
-            {showAdvanced && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg animate-fade-in">
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">Consumo (L/100km)</label>
-                   <input 
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={consumption}
-                    onChange={(e) => setConsumption(e.target.value === "" ? "" : parseFloat(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm outline-none focus:border-indigo-500"
-                   />
-                </div>
-                <div>
-                   <label className="block text-xs font-medium text-slate-500 mb-1">KM Annuali</label>
-                   <input 
-                    type="number"
-                    step="1000"
-                    min="0"
-                    value={kmAnnual}
-                    onChange={(e) => setKmAnnual(e.target.value === "" ? "" : parseFloat(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm outline-none focus:border-indigo-500"
-                   />
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-2">
                 Proiezione: {duration} Anni
@@ -272,41 +186,6 @@ const BolloTab: React.FC<BolloTabProps> = ({ onGarageUpdate, duration, onDuratio
                 onChange={(e) => onDurationChange(parseInt(e.target.value))}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleReset}
-                className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-slate-50 transition-all hover:border-slate-300"
-                title="Resetta campi"
-              >
-                <RotateCcw size={18} />
-                Reset
-              </button>
-              
-              <button
-                onClick={handleSaveCar}
-                disabled={isSaved || !isValid}
-                className={`flex-[2] py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-                  isSaved 
-                  ? 'bg-emerald-100 text-emerald-700 cursor-default'
-                  : !isValid 
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
-                }`}
-              >
-                {isSaved ? (
-                  <>
-                    <Check size={18} />
-                    Salvato nel Garage
-                  </>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    Salva nel Garage
-                  </>
-                )}
-              </button>
             </div>
           </div>
         </div>

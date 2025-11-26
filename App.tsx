@@ -3,6 +3,7 @@ import BolloTab from './components/BolloTab';
 import FuelTab from './components/FuelTab';
 import CompareTab from './components/CompareTab';
 import { Car, Zap, HelpCircle, LayoutDashboard } from 'lucide-react';
+import { Region, FuelType, EuroClass } from './types';
 
 enum Tab {
   BOLLO = 'bollo',
@@ -16,8 +17,30 @@ const App: React.FC = () => {
   const [garageLastUpdated, setGarageLastUpdated] = useState(Date.now());
   const [sharedDuration, setSharedDuration] = useState(5);
 
+  // Lifted State for Vehicle Data (Shared between BolloTab and FuelTab)
+  const currentYear = new Date().getFullYear();
+  const [carName, setCarName] = useState('');
+  const [kw, setKw] = useState<number | "">(0);
+  const [region, setRegion] = useState<Region | "">("");
+  const [fuel, setFuel] = useState<FuelType | "">("");
+  const [euroClass, setEuroClass] = useState<EuroClass | "">("");
+  const [regYear, setRegYear] = useState<number | "">(currentYear);
+  const [directDebit, setDirectDebit] = useState(false);
+
   const handleGarageUpdate = () => {
     setGarageLastUpdated(Date.now());
+  };
+
+  // Reset function for vehicle data (passed to BolloTab)
+  const resetVehicleData = () => {
+    setCarName('');
+    setKw(0);
+    setRegion("");
+    setFuel("");
+    setEuroClass("");
+    setRegYear(currentYear);
+    setDirectDebit(false);
+    setSharedDuration(5);
   };
 
   return (
@@ -33,7 +56,7 @@ const App: React.FC = () => {
             <h1 className="text-xl font-bold text-slate-800 sm:hidden">EcoBollo</h1>
           </div>
           <div className="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1 rounded-full">
-            v2.2
+            v2.4
           </div>
         </div>
       </header>
@@ -93,14 +116,34 @@ const App: React.FC = () => {
         <div className="transition-all duration-300">
           <div className={activeTab === Tab.BOLLO ? 'block' : 'hidden'}>
             <BolloTab 
-              onGarageUpdate={handleGarageUpdate} 
               duration={sharedDuration}
               onDurationChange={setSharedDuration}
+              // Vehicle Props
+              carName={carName} setCarName={setCarName}
+              kw={kw} setKw={setKw}
+              region={region} setRegion={setRegion}
+              fuel={fuel} setFuel={setFuel}
+              euroClass={euroClass} setEuroClass={setEuroClass}
+              regYear={regYear} setRegYear={setRegYear}
+              directDebit={directDebit} setDirectDebit={setDirectDebit}
+              onReset={resetVehicleData}
             />
           </div>
           
           <div className={activeTab === Tab.FUEL ? 'block' : 'hidden'}>
-            <FuelTab duration={sharedDuration} />
+            <FuelTab 
+              duration={sharedDuration} 
+              onGarageUpdate={handleGarageUpdate}
+              onReset={resetVehicleData}
+              // Vehicle Props
+              carName={carName}
+              kw={kw}
+              region={region}
+              fuel={fuel}
+              euroClass={euroClass}
+              regYear={regYear}
+              directDebit={directDebit}
+            />
           </div>
           
           <div className={activeTab === Tab.COMPARE ? 'block' : 'hidden'}>
