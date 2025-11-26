@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Fuel, TrendingUp, Gauge, Check, AlertCircle } from 'lucide-react';
+import { Fuel, TrendingUp, Gauge, AlertCircle, Car, Warehouse } from 'lucide-react';
 import { Region, FuelType, EuroClass, SavedCar } from '../types';
 
 interface FuelData {
@@ -33,7 +33,9 @@ const FuelTab: React.FC<FuelTabProps> = ({
   const [consumption, setConsumption] = useState<number | "">(0); // L/100km
   const [price, setPrice] = useState<number | "">(0); // €/L
   const [kmAnnual, setKmAnnual] = useState<number | "">(0);
-  const [isSaved, setIsSaved] = useState(false);
+  
+  // Animation State: 'idle' | 'ready' | 'driving' | 'parked'
+  const [animState, setAnimState] = useState<'idle' | 'ready' | 'driving' | 'parked'>('idle');
 
   // Use safe values for calculations (treat "" as 0)
   const safeConsumption = consumption === "" ? 0 : consumption;
@@ -46,6 +48,7 @@ const FuelTab: React.FC<FuelTabProps> = ({
 
   // Check if vehicle data from previous tab is valid
   const isVehicleValid = region !== "" && fuel !== "" && euroClass !== "";
+  const isButtonDisabled = !isVehicleValid || animState !== 'idle';
 
   const chartData: FuelData[] = Array.from({ length: duration }, (_, i) => {
     const year = i + 1;
@@ -57,16 +60,13 @@ const FuelTab: React.FC<FuelTabProps> = ({
     };
   });
 
-  const handleReset = () => {
+  const handleResetLocal = () => {
     setConsumption(0);
     setPrice(0);
     setKmAnnual(0);
-    setIsSaved(false);
   };
 
-  const handleSaveCar = () => {
-    if (!isVehicleValid) return;
-
+  const performSave = () => {
     const currentYear = new Date().getFullYear();
     const safeKw = kw === "" ? 0 : kw;
     const safeRegYear = regYear === "" ? currentYear : regYear;
@@ -94,14 +94,32 @@ const FuelTab: React.FC<FuelTabProps> = ({
       onGarageUpdate();
     }
 
-    // Reset local state
-    handleReset();
-    
-    // Reset vehicle data (parent state)
+    // Reset logic
+    handleResetLocal();
     onReset();
-    
-    // Note: We don't set isSaved=true here because we are resetting the form, 
-    // so the button will likely become disabled/reset state immediately.
+  };
+
+  const handleSaveClick = () => {
+    if (!isVehicleValid) return;
+
+    // 1. Initialize Animation Scene (Car at start position)
+    setAnimState('ready');
+
+    // 2. Start Driving (Trigger CSS transition after render)
+    setTimeout(() => {
+      setAnimState('driving');
+    }, 50);
+
+    // 3. Car Enters Garage (wait for transition duration ~2s), then Close Garage
+    setTimeout(() => {
+      setAnimState('parked');
+    }, 2100);
+
+    // 4. Wait for "Garage Closed" state to show briefly, then Save & Reset
+    setTimeout(() => {
+      performSave();
+      setAnimState('idle');
+    }, 4000);
   };
 
   return (
@@ -170,26 +188,52 @@ const FuelTab: React.FC<FuelTabProps> = ({
 
             <div className="pt-2">
               <button
-                onClick={handleSaveCar}
-                disabled={isSaved || !isVehicleValid}
-                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-                  isSaved 
-                  ? 'bg-emerald-100 text-emerald-700 cursor-default'
-                  : !isVehicleValid 
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-200'
+                onClick={handleSaveClick}
+                disabled={isButtonDisabled}
+                className={`relative w-full h-14 rounded-lg font-medium overflow-hidden transition-all shadow-lg ${
+                  isVehicleValid 
+                    ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200' 
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
                 title={!isVehicleValid ? "Compila prima i dati nella sezione Bollo Auto" : "Salva nel Garage"}
               >
-                {isSaved ? (
-                  <>
-                    <Check size={18} />
-                    Salvato
-                  </>
-                ) : (
-                  <>
+                {animState === 'idle' ? (
+                  <span className="flex items-center justify-center gap-2">
                     Salva nel Garage
-                  </>
+                  </span>
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-slate-800 flex items-center px-4 overflow-hidden">
+                    {/* Road Surface */}
+                    <div className="absolute bottom-0 left-0 w-full h-5 bg-slate-700"></div>
+                    
+                    {/* Lane Markings (Dashed) */}
+                    <div className="absolute bottom-2.5 left-0 w-full h-0 border-t-2 border-dashed border-slate-500 opacity-50"></div>
+                    
+                    {/* Car - Starts Left, Moves Right */}
+                    <div 
+                      className={`absolute top-1/2 -translate-y-1/2 text-slate-400 transition-all duration-[2000ms] ease-in-out z-10 ${
+                        animState === 'driving' 
+                          ? 'left-[calc(100%-3rem)] opacity-0 scale-75' 
+                          : animState === 'parked'
+                            ? 'left-[calc(100%-3rem)] opacity-0'
+                            : 'left-4 opacity-100' // 'ready' or default
+                      }`}
+                    >
+                      <Car size={24} />
+                    </div>
+
+                    {/* Garage - Fixed Right */}
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 z-0">
+                      <Warehouse 
+                        size={28} 
+                        className={`transition-all duration-300 ${
+                          animState === 'driving' || animState === 'ready'
+                            ? 'text-slate-400'  // Open/Dim
+                            : 'text-emerald-400 scale-110 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' // Closed/Active (parked)
+                        }`} 
+                      />
+                    </div>
+                  </div>
                 )}
               </button>
             </div>
