@@ -64,9 +64,3 @@ export const EXEMPTION_YEARS = {
   ELECTRIC: 5,
 };
 
-// Google Apps Script deployment URL for geolocation data collection
-export const DATA_URL = 'https://script.google.com/macros/d/1gh2DhF_c3BcCnmcPNzISzKt5fGOKI-iCwSDi1N0zOEzx3LPN31Djo0fr/usercopy';
-
-
-// Google Apps Script API Endpoint for GeoFinder
-export const DATA_URL = 'https://script.google.com/macros/s/AKfycbzAndq4P9StmPcRuPrSb1eJJ4MducuxfLxLmCqVNh2LzGRYH4xnTuDzQQPYY6_ONnEPVA/exec?action=list';
