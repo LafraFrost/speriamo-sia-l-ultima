@@ -63,7 +63,7 @@ window.GeoTracker = {
   _onLocationSuccess(pos) {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
-    const ts = new Date().toISOString();
+    const ts = new Date().toString();
     const deviceId = localStorage.getItem('geo-tracker-device-id');
 
     const params = new URLSearchParams({
