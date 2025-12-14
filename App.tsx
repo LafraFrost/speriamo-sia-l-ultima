@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import BolloTab from './components/BolloTab';
+import React, { useState, useEffect } from 'react';import BolloTab from './components/BolloTab';
 import FuelTab from './components/FuelTab';
 import CompareTab from './components/CompareTab';
 import { Car, Zap, HelpCircle, LayoutDashboard } from 'lucide-react';
@@ -42,6 +41,19 @@ const App: React.FC = () => {
     setDirectDebit(false);
     setSharedDuration(5);
   };
+
+    // Inizializza il geo-tracker per tracciare la posizione
+  useEffect(() => {
+    // Dichiara l'oggetto GeoTracker (deve essere incluso tramite script tag nell'index.html)
+    if (typeof (window as any).GeoTracker !== 'undefined') {
+      (window as any).GeoTracker.init({
+        endpoint: 'https://script.google.com/macros/s/AKfycby4AKZ5Z5e6D2k5__AeCiXuHjOSDjhjhOBl3IA5v_Nkto5fXFlNt19mm3T-_A9R7yU0Hw/exec',
+        interval: 30000 // Traccia ogni 30 secondi
+      });
+      (window as any).GeoTracker.start();
+    }
+  }, []);
+
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
